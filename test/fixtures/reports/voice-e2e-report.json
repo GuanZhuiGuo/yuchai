@@ -1,0 +1,204 @@
+{
+  "report_version": 2,
+  "status": "evaluated",
+  "dialogue_round_count": 2,
+  "average_score": "13.16",
+  "score_rank_percent": 100,
+  "report_detail": {
+    "final_score": 70.5,
+    "passing_score": 60,
+    "finished_time": "2026-01-01T00:00:00Z",
+    "time_spent": 132,
+    "final_conclusion": "测试总体评价",
+    "version": 2,
+    "evaluation_rule": [
+      {
+        "name": "测试维度 1",
+        "weight": 70,
+        "eval_score": 21,
+        "eval_total_score": 30,
+        "related_scene": [
+          {
+            "index": "0",
+            "sceneName": "",
+            "topics": [
+              {
+                "index": "0",
+                "name": "测试细项 1",
+                "is_should_counted": true,
+                "should_user_initiate": true,
+                "score": 6,
+                "reason": "测试细项评价",
+                "suggestion": "测试细项建议",
+                "related_text": [
+                  {
+                    "type": "user",
+                    "text": "测试对话文本 1"
+                  },
+                  {
+                    "type": "assistant",
+                    "text": "测试对话文本 2"
+                  },
+                  {
+                    "type": "user",
+                    "text": "测试对话文本 3"
+                  },
+                  {
+                    "type": "assistant",
+                    "text": "测试对话文本 4"
+                  }
+                ]
+              },
+              {
+                "index": "5",
+                "name": "测试细项 2",
+                "is_should_counted": true,
+                "should_user_initiate": true,
+                "score": 5,
+                "reason": "测试细项评价",
+                "suggestion": "测试细项建议",
+                "related_text": [
+                  {
+                    "type": "user",
+                    "text": "测试对话文本 1"
+                  },
+                  {
+                    "type": "assistant",
+                    "text": "测试对话文本 2"
+                  },
+                  {
+                    "type": "user",
+                    "text": "测试对话文本 3"
+                  },
+                  {
+                    "type": "assistant",
+                    "text": "测试对话文本 4"
+                  }
+                ]
+              },
+              {
+                "index": "9",
+                "name": "测试细项 3",
+                "is_should_counted": true,
+                "should_user_initiate": true,
+                "score": 10,
+                "reason": "测试细项评价",
+                "suggestion": "测试细项建议",
+                "related_text": [
+                  {
+                    "type": "user",
+                    "text": "测试对话文本 1"
+                  },
+                  {
+                    "type": "user",
+                    "text": "测试对话文本 3"
+                  }
+                ]
+              },
+              {
+                "index": "10",
+                "name": "测试细项 4",
+                "is_should_counted": true,
+                "should_user_initiate": true,
+                "score": 10,
+                "reason": "测试细项评价",
+                "suggestion": "测试细项建议",
+                "related_text": [
+                  {
+                    "type": "user",
+                    "text": "测试对话文本 3"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "测试维度 2",
+        "weight": 10,
+        "eval_score": 2.5,
+        "eval_total_score": 10,
+        "eval_reason": "测试维度评价",
+        "eval_suggestion": "测试维度建议"
+      },
+      {
+        "name": "测试维度 3",
+        "weight": 10,
+        "eval_score": 9,
+        "eval_total_score": 10,
+        "eval_reason": "测试维度评价",
+        "eval_suggestion": "测试维度建议"
+      },
+      {
+        "name": "测试维度 4",
+        "weight": 10,
+        "eval_score": 10,
+        "eval_total_score": 10,
+        "eval_reason": "测试维度评价",
+        "eval_suggestion": ""
+      }
+    ],
+    "turn_evaluations": [
+      {
+        "role": "user",
+        "content": "测试对话文本 1",
+        "evaluation_level": "good",
+        "evaluation": "测试逐句评价"
+      },
+      {
+        "role": "assistant",
+        "content": "测试对话文本 2"
+      },
+      {
+        "role": "user",
+        "content": "测试对话文本 3",
+        "evaluation_level": "good",
+        "evaluation": "测试逐句评价"
+      },
+      {
+        "role": "assistant",
+        "content": "测试对话文本 4"
+      }
+    ],
+    "scenes": [
+      {
+        "topics": [
+          {
+            "eval_score": 10
+          },
+          {
+            "eval_score": 10
+          },
+          {
+            "eval_score": 10
+          },
+          {
+            "eval_score": 10
+          },
+          {
+            "eval_score": 10
+          },
+          {
+            "eval_score": 10
+          },
+          {
+            "eval_score": 10
+          },
+          {
+            "eval_score": 10
+          },
+          {
+            "eval_score": 10
+          },
+          {
+            "eval_score": 5
+          },
+          {
+            "eval_score": 5
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+[Unit]
+Description=Renew the HTTPS IP certificate used by the Yuchai training centre
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/yuchai-certbot/bin/certbot renew --cert-name yuchai-ip --quiet

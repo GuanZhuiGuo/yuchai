@@ -1,0 +1,17 @@
+node_modules/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+evidence/*-credentials*
+evidence/*-secret*
+
+# Local verification records and generated delivery artifacts.
+/evidence/
+/outputs/
+/deploy/releases/
+/TASK.md
+/.impeccable/
+/research/*
+!/research/媒体来源.md

@@ -1,0 +1,2 @@
+# Generated JavaScript embeds WebAssembly bytes; preserve the bundle verbatim.
+public/assets/opus-decoder.js -diff -text

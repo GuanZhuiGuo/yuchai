@@ -1,0 +1,21 @@
+[Unit]
+Description=Yuchai training centre H5 and sparring proxy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+WorkingDirectory=/opt/yuchai-learning-h5/current
+EnvironmentFile=/etc/yuchai-learning-h5.env
+ExecStart=/opt/node-v24/bin/node /opt/yuchai-learning-h5/current/server.mjs
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,11 @@
+[Unit]
+Description=Check the Yuchai training centre HTTPS certificate twice daily
+
+[Timer]
+OnCalendar=*-*-* 00,12:00:00
+RandomizedDelaySec=3600
+Persistent=true
+Unit=yuchai-cert-renew.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#cf0b19">
+  <title>玉柴学习中心 · 销售实战成长</title>
+  <link rel="icon" href="./assets/yuchai-logo.png">
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./report.css">
+</head>
+<body>
+  <div class="demo-layout">
+    <div class="app-frame">
+      <header id="app-header"></header>
+      <main id="app-main" tabindex="-1"></main>
+      <nav id="tabbar" class="tabbar" aria-label="主要导航"></nav>
+    </div>
+    <aside class="presentation" aria-label="汇报演示导航">
+      <img class="presentation-logo" src="./assets/yuchai-logo.png" alt="玉柴 YUCHAI">
+      <h1>从学会方法，<br>到赢得信任。</h1>
+      <p>让课程里的每一个要点，<br>变成客户对话里的一个行动。</p>
+      <div class="story-nav">
+        <button data-action="story-start"><span>01</span><div><strong>学方法</strong><small>视频 + 图文 · 方法与自检</small></div></button>
+        <button data-action="story-exam"><span>02</span><div><strong>练实战</strong><small>多个场景 · 文字 / 语音</small></div></button>
+        <button data-action="story-report"><span>03</span><div><strong>看见成长</strong><small>对话证据 · 定向复练</small></div></button>
+      </div>
+      <div class="presentation-note"><span class="status-dot"></span>可操作 H5 演示 <span id="connection-status">正在检查接入</span></div>
+      <button class="text-button reset-demo" data-action="reset">重置本地学习进度</button>
+      <p class="scope-note">课程关联多个实战场景。可直接实战，也可先学习，报告带你回到需要复练的方法。</p>
+    </aside>
+  </div>
+  <dialog id="sheet"></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="./curriculum.js"></script>
+  <script src="./media.js"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

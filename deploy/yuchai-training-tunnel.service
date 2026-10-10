@@ -1,0 +1,32 @@
+[Unit]
+Description=HTTPS demo tunnel for Yuchai training centre
+After=network-online.target nginx.service yuchai-learning-h5.service mia-portal.service
+Wants=network-online.target yuchai-learning-h5.service mia-portal.service
+Requires=nginx.service
+PartOf=nginx.service
+
+[Service]
+Type=simple
+DynamicUser=yes
+StateDirectory=yuchai-tunnel
+ExecStartPre=/usr/bin/rm -f /var/lib/yuchai-tunnel/tunnel.log
+ExecStart=/usr/bin/cloudflared tunnel --no-autoupdate --protocol quic --edge-ip-version 4 --logfile /var/lib/yuchai-tunnel/tunnel.log --url http://127.0.0.1:5320
+ExecStartPost=+/usr/local/sbin/yuchai-update-tunnel-origin
+Restart=always
+RestartSec=10
+TimeoutStartSec=75
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/etc/nginx/snippets /etc/yuchai-learning-h5.env /var/log/nginx
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
