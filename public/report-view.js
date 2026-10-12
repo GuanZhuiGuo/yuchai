@@ -1,4 +1,4 @@
-import { scoreRatio, radarAxes } from './report-model.js';
+import { scoreRatio, radarAxes, validReviewRecommendations, reportFeedbackConflicts } from './report-model.js';
 
 const tabs = [['overview', '能力概览'], ['scoring', '评分依据'], ['replay', '逐句复盘']];
 const num = value => typeof value === 'number' && Number.isFinite(value) ? String(Math.round(value * 10) / 10) : '—';
@@ -18,7 +18,11 @@ function content(r) {
       return { ...item, itemId, references: item.references || sampleReferences };
     })
   }));
-  return { dimensions, transcript };
+  const conflicts = r.isMock ? [] : reportFeedbackConflicts(dimensions, transcript);
+  for (const dimension of dimensions) {
+    for (const item of dimension.items) item.feedbackConflicts = conflicts.filter(value => value.itemId === item.itemId);
+  }
+  return { dimensions, transcript, conflicts };
 }
 
 export function initialReportUI() {
@@ -53,7 +57,7 @@ export function reportPage(r, ctx, ui) {
   </div>
   <div class="report-tabs" role="group" aria-label="报告阅读方式">${tabs.map(([key, label]) => `<button type="button" data-action="report-tab" data-tab="${key}" aria-pressed="${ui.tab === key}">${label}</button>`).join('')}</div>
   <div id="report-panel" class="report-panel">${reportPanel(r, ctx, ui)}</div>
-  <div class="report-finish"><a class="button full" href="#${r.isMock ? 'assessment' : `prepare/${esc(r.practiceId || 'p-overseas')}`}">再练一次，检验改变 ${icon('arrow')}</a></div>`;
+  <div class="report-finish"><a class="button full" href="#${!r.isMock && r.practiceId ? `prepare/${esc(r.practiceId)}` : 'assessment'}">${!r.isMock && r.practiceId ? '再练一次，检验改变' : '选择练习'} ${icon('arrow')}</a></div>`;
 }
 
 function radar(dimensions, esc) {
@@ -87,7 +91,9 @@ function radar(dimensions, esc) {
 
 function recommendations(r, ctx) {
   const { esc, icon } = ctx;
-  return `<section class="report-priorities"><h3>下一次，先练这几件事</h3>${(r.reviewRecommendations || []).length ? r.reviewRecommendations.map(x => `<a href="#reader/${esc(x.courseId)}/0?review=1" class="report-recommendation"><span>${icon('refresh')}</span><div><strong>${esc(x.title)}</strong><p>${esc(x.reason)}</p></div>${icon('chevron')}</a>`).join('') : '<p class="report-help">本次没有可自动对应的复习课程。请先阅读评分原因与改进建议。</p>'}</section>`;
+  const items = validReviewRecommendations(r.reviewRecommendations);
+  if (!items.length) return '';
+  return `<section class="report-priorities"><h3>下一次，先练这几件事</h3>${items.map(x => `<a href="#reader/${esc(x.courseId)}/0?review=1" class="report-recommendation"><span>${icon('refresh')}</span><div><strong>${esc(x.title)}</strong><p>${esc(x.reason)}</p></div>${icon('chevron')}</a>`).join('')}</section>`;
 }
 
 function overview(r, ctx, model) {
@@ -103,7 +109,18 @@ function overview(r, ctx, model) {
     }).join('')}</div>
     <p class="report-help report-method">${r.isMock ? '本图使用固定样例的 8 个维度。' : '本图使用本次实战返回的评分维度。'}点击维度可查看原始分值与评价依据，雷达不参与总分计算。</p>
   </section>${recommendations(r, ctx)}
-  <button class="report-replay-entry" data-action="report-tab" data-tab="replay">${icon('file')}<span><strong>回到每一句客户对话</strong><small>${r.isMock ? '查看参考对话节选与评分关联' : '查看学员发言、接口点评与相关考核话题'}</small></span>${icon('arrow')}</button>`;
+  ${model.conflicts.length ? '<div class="report-data-note">本报告有评价结论不一致的发言，已在逐句复盘和对应评分原因中标记“待确认”。分数保留服务端原值。</div>' : ''}
+  <button class="report-replay-entry" data-action="report-tab" data-tab="replay">${icon('file')}<span><strong>回到每一句客户对话</strong><small>${r.isMock ? '查看参考对话节选与评分关联' : '查看学员发言、接口点评与相关练习话题'}</small></span>${icon('arrow')}</button>`;
+}
+
+function feedbackConflict(conflicts, ctx, mode = 'replay') {
+  const { esc, icon } = ctx;
+  if (!conflicts.length) return '';
+  return `<aside class="report-feedback-conflict" role="note"><strong>${icon('info')}评价结论不一致 · 待确认</strong>
+    <p>本句点评与对应话题评分对同一规范给出不同结论。请课程管理员核对评价口径；当前保留接口原文和原分。</p>
+    ${conflicts.map(value => `<dl><div><dt>本句点评原文</dt><dd>${esc(value.evaluation)}</dd></div>${mode === 'replay' ? `<div><dt>「${esc(value.title)}」评分原因原文</dt><dd>${esc(value.reason)}</dd></div>` : ''}</dl>`).join('')}
+    <p class="report-conflict-action">${mode === 'replay' ? '下次练习可先对照评分建议检查遗漏动作；本句“符合规范”的结论暂待确认。' : '本项评分针对该话题的完整要求；本句点评仅针对这次发言，但同一规范的相反结论仍需核对。'}</p>
+  </aside>`;
 }
 
 function topic(item, r, ctx) {
@@ -116,6 +133,7 @@ function topic(item, r, ctx) {
     <div class="topic-heading"><h4>${esc(item.title)}</h4><span>${scoreText}</span></div>
     <div class="topic-status">${item.counted === false ? '<span class="tag">未纳入计分</span>' : item.counted === true ? '<span class="tag">已纳入计分</span>' : ''}${lost !== null && lost > 0 ? `<span class="topic-loss">少 ${num(lost)} 分</span>` : ''}</div>
     <dl class="report-reason"><div><dt>${r.isMock ? '样例评价依据' : '评分原因'}</dt><dd>${esc(reason || '接口未返回本项评价原因。')}</dd></div>${item.advice ? `<div><dt>下次这样做</dt><dd>${esc(item.advice)}</dd></div>` : ''}</dl>
+    ${feedbackConflict(item.feedbackConflicts || [], ctx, 'topic')}
     ${(item.references || []).length ? `<div class="report-quotes"><h5>${r.isMock ? '关联的对话节选' : '相关对话原文'}</h5>${item.references.map(ref => {
       const targets = ref.turnId ? [ref.turnId] : ref.ambiguous ? ref.candidateTurnIds || [] : [];
       return `<blockquote><span>${roleName(ref.speaker)}</span><p>${esc(ref.text)}</p>${targets.length ? `<button class="text-button" data-action="report-jump" data-turns="${esc(targets.join(','))}">${targets.length === 1 ? '定位这句发言' : `核对 ${targets.length} 处相同发言`}${icon('arrow')}</button>` : '<small class="quote-location-note">该引用未匹配到本次对话，暂无法定位。</small>'}</blockquote>`;
@@ -131,7 +149,7 @@ function scoring(r, ctx, ui, model) {
   const initial = valid.sort((a, b) => a.ratio - b.ratio)[0]?.index ?? 0;
   const opened = ui.dimension ?? initial;
   return `<div class="report-section-heading"><h3>评分与改进依据</h3><span>${dimensions.reduce((sum, d) => sum + d.items.length, 0)} 项话题</span></div>
-    <p class="report-help">${r.isMock ? '固定样例的细项可查看满分与失分。' : '维度显示原始得分和权重。细项未返回满分时，仅展示原始分，不推算扣分；未纳入计分的话题单独标识。'}</p>
+    <p class="report-help">${r.isMock ? '固定样例的细项可查看满分与失分。' : '维度与话题评分针对完整要求，本句点评针对单次发言。维度显示原始得分和权重；细项未返回满分时仅展示原始分，不推算扣分；未纳入计分的话题单独标识。'}</p>
     <div class="report-dimensions">${dimensions.map((d, i) => {
       const ratio = scoreRatio(d.score, d.maxScore);
       return `<details class="report-dimension" id="report-dimension-${i}" ${i === opened ? 'open' : ''}>
@@ -144,22 +162,23 @@ function scoring(r, ctx, ui, model) {
 }
 
 function replay(r, ctx, ui, model) {
-  const { esc, icon } = ctx, { dimensions, transcript } = model;
+  const { esc, icon } = ctx, { dimensions, transcript, conflicts } = model;
   const items = new Map(dimensions.flatMap((d, index) => d.items.map(item => [item.itemId, { ...item, dimensionIndex: index }])));
   const turns = transcript.map((turn, index) => ({ ...turn, order: index + 1 }));
   const learnerComments = turns.filter(t => t.speaker === 'learner' && t.evaluation).length;
   const visible = turns.filter(t => ui.filter === 'learner' ? t.speaker === 'learner' : ui.filter === 'feedback' ? t.evaluation || t.itemIds.some(id => items.has(id)) || (t.ambiguousItemIds || []).some(id => items.has(id)) : true);
   return `<div class="report-section-heading"><h3>逐句复盘</h3><span>${turns.length} 条发言</span></div>
-    <p class="report-help">${r.isMock ? '参考案例对话节选。关联标签指向样例评分，时间仅为示例。' : `${learnerComments} 条学员发言带有接口点评。按返回顺序复盘，点评等级不代表逐句数字评分。`}</p>
+    <p class="report-help">${r.isMock ? '参考案例对话节选。关联标签指向样例评分，时间仅为示例。' : `${learnerComments} 条学员发言带有接口点评。本句点评只针对单次发言，不表示整项要求全部完成，也不代表逐句数字评分；相反结论单独标记待确认。`}</p>
     <div class="replay-filters" role="group" aria-label="筛选复盘发言">${[['all', '全部发言'], ['learner', '仅看学员'], ['feedback', '含点评或评分关联']].map(([key, label]) => `<button data-action="report-filter" data-filter="${key}" aria-pressed="${ui.filter === key}">${label}</button>`).join('')}</div>
     ${ui.highlighted.length > 1 ? '<div class="report-data-note">原文重复出现，接口未提供定位标识。已标出所有同文发言，请结合上下文核对。</div>' : ''}
     <div class="review-timeline">${visible.length ? visible.map(t => {
       const related = (t.itemIds || []).map(id => items.get(id)).filter(Boolean);
+      const turnConflicts = conflicts.filter(value => value.turnId === t.id);
       return `<article class="review-turn ${t.speaker === 'learner' ? 'is-learner' : ''} ${ui.highlighted.includes(t.id) ? 'is-highlighted' : ''}" id="report-turn-${esc(t.id)}" data-turn-id="${esc(t.id)}" tabindex="-1">
         <div class="review-turn-heading"><span class="turn-sequence">${String(t.order).padStart(2, '0')}</span><strong>${roleName(t.speaker)}</strong>${r.isMock && t.time ? `<small>示例 ${esc(t.time)}</small>` : ''}</div>
         <p class="review-utterance">${esc(t.text)}</p>
-        ${t.evaluation ? `<div class="turn-feedback"><div><span>${icon('checkCircle')}本句点评</span>${t.evaluationLevel ? `<b class="evaluation-level">${esc(levelNames[t.evaluationLevel] || t.evaluationLevel)}</b>` : ''}</div><p>${esc(t.evaluation)}</p></div>` : ''}
-        ${related.length ? `<div class="turn-topics"><span>${r.isMock ? '样例评分关联' : '相关考核话题'}</span>${related.map(item => `<button data-action="report-topic" data-index="${item.dimensionIndex}" data-topic="${esc(item.itemId)}">${esc(item.title)}${icon('chevron')}</button>`).join('')}</div>` : ''}
+        ${turnConflicts.length ? feedbackConflict(turnConflicts, ctx) : t.evaluation ? `<div class="turn-feedback"><div><span>${icon('info')}本句接口点评</span>${t.evaluationLevel ? `<b class="evaluation-level">${esc(levelNames[t.evaluationLevel] || t.evaluationLevel)}</b>` : ''}</div><p>${esc(t.evaluation)}</p></div>` : ''}
+        ${related.length ? `<div class="turn-topics"><span>${r.isMock ? '样例评分关联' : '相关练习话题'}</span>${related.map(item => `<button data-action="report-topic" data-index="${item.dimensionIndex}" data-topic="${esc(item.itemId)}">${esc(item.title)}${icon('chevron')}</button>`).join('')}</div>` : ''}
         ${(t.ambiguousItemIds || []).length ? '<p class="report-help">存在同文引用，话题关联需结合上下文核对。</p>' : ''}
       </article>`;
     }).join('') : '<p class="report-empty">当前筛选没有发言。切换“全部发言”可查看已有记录。</p>'}</div>

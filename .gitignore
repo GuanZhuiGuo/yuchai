@@ -15,3 +15,10 @@ evidence/*-secret*
 /.impeccable/
 /research/*
 !/research/媒体来源.md
+
+# Browser QA outputs stay local.
+/.playwright-cli/
+/output/
+
+__pycache__/
+*.pyc

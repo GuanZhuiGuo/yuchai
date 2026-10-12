@@ -4,6 +4,10 @@ import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import test from 'node:test';
 import { ALLOWED_PLAN_IDS } from '../server.mjs';
+import * as learningState from '../public/learning-state.js';
+import * as lessonModel from '../public/lesson-model.js';
+import { searchCourses } from '../public/course-search.js';
+import { buildLiveRecommendations, matchReportCourse, validReviewRecommendations } from '../public/report-model.js';
 
 const source = readFileSync(new URL('../public/curriculum.js', import.meta.url), 'utf8');
 function curriculum() {
@@ -15,11 +19,12 @@ function curriculum() {
 function appHarness(data = curriculum()) {
   const nodes = new Map();
   const node = selector => {
-    if (!nodes.has(selector)) nodes.set(selector, { innerHTML: '', textContent: '', scrollTop: 0, classList: { add() {}, remove() {}, toggle() {} } });
+    if (!nodes.has(selector)) nodes.set(selector, { innerHTML: '', textContent: '', scrollTop: 0, querySelectorAll: () => [], classList: { add() {}, remove() {}, toggle() {} } });
     return nodes.get(selector);
   };
   const context = vm.createContext({
     YUCHAI_CURRICULUM: data,
+    ...learningState, ...lessonModel, searchCourses, buildLiveRecommendations, matchReportCourse, validReviewRecommendations,
     initialReportUI: () => ({ tab: 'overview' }),
     document: { querySelector: node, addEventListener() {} },
     window: { addEventListener() {}, scrollTo() {} },
@@ -28,7 +33,7 @@ function appHarness(data = curriculum()) {
   });
   const rawApp = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
   // Exercise the real render functions in a DOM stub; omit network bootstrap.
-  const bootstrap = rawApp.indexOf('\nrender();\nPromise.allSettled(');
+  const bootstrap = rawApp.indexOf('\nrender();\n');
   assert.ok(bootstrap > 0);
   vm.runInContext(rawApp.slice(0, bootstrap).replace(/^import .*\n/gm, ''), context);
   return { context, node, run: code => vm.runInContext(code, context) };
@@ -98,7 +103,7 @@ test('the home count follows the task model and zero learning progress still per
     app.run(`prepare(${JSON.stringify(practice.id)})`);
     const html = app.node('#app-main').innerHTML;
     assert.ok(html.includes('可先学后练，也可直接实战'), practice.id);
-    assert.match(html, /data-action="start-practice"[^>]*>开始实战考核/, practice.id);
+    assert.match(html, /data-action="start-practice"[^>]*>开始实战练习/, practice.id);
     assert.doesNotMatch(html.match(/<button[^>]*data-action="start-practice"[^>]*>/)?.[0] || '', /disabled/, practice.id);
   }
   assert.equal(app.run('available(practice("p-oem"))'), true);

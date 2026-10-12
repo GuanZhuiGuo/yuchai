@@ -8,6 +8,10 @@
   <link rel="icon" href="./assets/yuchai-logo.png">
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./report.css">
+  <link rel="modulepreload" href="./app.js">
+  <link rel="modulepreload" href="./session-view.js">
+  <link rel="modulepreload" href="./report-model.js">
+  <link rel="modulepreload" href="./report-view.js">
 </head>
 <body>
   <div class="demo-layout">
@@ -25,7 +29,7 @@
         <button data-action="story-exam"><span>02</span><div><strong>练实战</strong><small>多个场景 · 文字 / 语音</small></div></button>
         <button data-action="story-report"><span>03</span><div><strong>看见成长</strong><small>对话证据 · 定向复练</small></div></button>
       </div>
-      <div class="presentation-note"><span class="status-dot"></span>可操作 H5 演示 <span id="connection-status">正在检查接入</span></div>
+      <div class="presentation-note"><span class="status-dot"></span>可操作 H5 演示 <span id="connection-status" role="status" aria-live="polite">课程可先学习 · 实战后台连接中</span></div>
       <button class="text-button reset-demo" data-action="reset">重置本地学习进度</button>
       <p class="scope-note">课程关联多个实战场景。可直接实战，也可先学习，报告带你回到需要复练的方法。</p>
     </aside>

@@ -40,7 +40,7 @@ globalThis.YUCHAI_MEDIA = {
         "poster": "./assets/factory-robot.jpg",
         "captions": "./assets/micro-needs.vtt",
         "durationSeconds": 99.13,
-        "title": "示范微课 · 从开场建立需求沟通（关联学习）",
+        "title": "关联微课 · 问出真实需求",
         "chapters": [
           {
             "time": 0,
@@ -65,7 +65,31 @@ globalThis.YUCHAI_MEDIA = {
         ],
         "voiceProvider": "Volcengine Doubao TTS",
         "voiceName": "zh_male_yunzhou_jupiter_bigtts",
-        "voiceLabel": "豆包合成配音 · 云舟"
+        "voiceLabel": "豆包合成配音 · 云舟",
+        "learningFocus": {
+          "sourceTitle": "问出真实需求",
+          "reused": true,
+          "connection": "复用需求课微课，学习开场获得许可后如何接上第一问；本片没有演示身份介绍或完整拜访开场。",
+          "goal": "用客户容易回答的经营问题，承接开场后的沟通许可。",
+          "segments": [
+            {
+              "start": 0,
+              "end": 25.583,
+              "title": "从价格回到使用场景",
+              "action": "抓住“先问比较口径，再问工况”的顺序；开场后先问客户近期项目与一个关注点。",
+              "sectionIndex": 1
+            },
+            {
+              "start": 25.583,
+              "end": 53.208,
+              "title": "开放提问，顺着回答往下问",
+              "action": "一次问一个问题，避免连续介绍参数或像填表一样盘问。",
+              "sectionIndex": 0
+            }
+          ],
+          "transferAction": "先用图文讲义练身份、来意和许可，再用视频的方法接一句开放提问。",
+          "boundary": "完整开场示范见本课第2节图文；视频只承接取得许可后的需求沟通。"
+        }
       }
     },
     "c2": {
@@ -101,7 +125,38 @@ globalThis.YUCHAI_MEDIA = {
         ],
         "voiceProvider": "Volcengine Doubao TTS",
         "voiceName": "zh_male_yunzhou_jupiter_bigtts",
-        "voiceLabel": "豆包合成配音 · 云舟"
+        "voiceLabel": "豆包合成配音 · 云舟",
+        "learningFocus": {
+          "sourceTitle": "问出真实需求",
+          "reused": false,
+          "connection": "本片对应工况、痛点、决策链与需求摘要。",
+          "goal": "从客户的一句诉求追到影响、优先级和决策参与人。",
+          "segments": [
+            {
+              "start": 25.583,
+              "end": 53.208,
+              "title": "四层需求提问",
+              "action": "按现状、问题、影响、价值提问，并接着客户回答继续追问。",
+              "sectionIndex": 0
+            },
+            {
+              "start": 53.208,
+              "end": 75.958,
+              "title": "确认参与人和节点",
+              "action": "确认技术、采购、运营与审批角色分别要什么材料。",
+              "sectionIndex": 1
+            },
+            {
+              "start": 75.958,
+              "end": 99.13,
+              "title": "复述并确认需求",
+              "action": "把事实、待补数据与下一步分开，说出一句请客户确认的摘要。",
+              "sectionIndex": 2
+            }
+          ],
+          "transferAction": "进入练习前，写一句包含工况、核心问题、优先级和参与人的需求摘要。",
+          "boundary": "客户未确认的需求不得当作已知事实；响应和交付条件需要核实。"
+        }
       }
     },
     "c3": {
@@ -137,7 +192,38 @@ globalThis.YUCHAI_MEDIA = {
         ],
         "voiceProvider": "Volcengine Doubao TTS",
         "voiceName": "zh_male_yunzhou_jupiter_bigtts",
-        "voiceLabel": "豆包合成配音 · 云舟"
+        "voiceLabel": "豆包合成配音 · 云舟",
+        "learningFocus": {
+          "sourceTitle": "说清经营价值",
+          "reused": false,
+          "connection": "本片对应方案组织、同口径 TCO 和当地服务验证。",
+          "goal": "让客户知道价值测算基于什么数据，还要验证哪些条件。",
+          "segments": [
+            {
+              "start": 22.5,
+              "end": 46,
+              "title": "统一成本比较口径",
+              "action": "写清周期、里程、负载、能源价格和纳入的成本范围。",
+              "sectionIndex": 1
+            },
+            {
+              "start": 46,
+              "end": 70.917,
+              "title": "核对教学算例的边界",
+              "action": "识别 7000 元只是设定条件下的燃油差额，不能直接当作产品收益。",
+              "sectionIndex": 1
+            },
+            {
+              "start": 70.917,
+              "end": 94.42,
+              "title": "价值落到验证计划",
+              "action": "让客户确认输入，核实当地服务、备件与响应人，再约定技术验证。",
+              "sectionIndex": 2
+            }
+          ],
+          "transferAction": "围绕客户的一项优先需求，提出同口径测算方法、资料来源与待验证清单。",
+          "boundary": "课程算例不代表玉柴实测收益；参数、服务时效与商务条件以适用资料和授权为准。"
+        }
       }
     },
     "c4": {
@@ -148,7 +234,7 @@ globalThis.YUCHAI_MEDIA = {
         "poster": "./assets/export-buses.jpg",
         "captions": "./assets/micro-tco.vtt",
         "durationSeconds": 94.42,
-        "title": "示范微课 · 用验证依据回应顾虑（关联学习）",
+        "title": "关联微课 · 说清经营价值",
         "chapters": [
           {
             "time": 0,
@@ -173,7 +259,31 @@ globalThis.YUCHAI_MEDIA = {
         ],
         "voiceProvider": "Volcengine Doubao TTS",
         "voiceName": "zh_male_yunzhou_jupiter_bigtts",
-        "voiceLabel": "豆包合成配音 · 云舟"
+        "voiceLabel": "豆包合成配音 · 云舟",
+        "learningFocus": {
+          "sourceTitle": "说清经营价值",
+          "reused": true,
+          "connection": "复用经营价值课微课，提取“说明证据边界、约定验证动作”来回应风险顾虑；本片没有展开赔付审批流程。",
+          "goal": "把客户的风险顾虑转成需要补齐的证据和双方可执行的验证动作。",
+          "segments": [
+            {
+              "start": 0,
+              "end": 22.5,
+              "title": "区分已验证与待测试",
+              "action": "回应技术顾虑时，先列适配依据和待验证工况，不用笼统保证代替证据。",
+              "sectionIndex": 1
+            },
+            {
+              "start": 70.917,
+              "end": 94.42,
+              "title": "验证动作与承诺边界",
+              "action": "确认输入与当地服务安排，约定验证和反馈；未经确认的节油率、时效与商务条件不承诺。",
+              "sectionIndex": 2
+            }
+          ],
+          "transferAction": "先按本课第1节确认顾虑，再说明一项证据、一个待验证问题和一个下一步安排。",
+          "boundary": "赔付、退换、账期等条款的授权与审批见本课第3节图文，不能从视频推定已经批准。"
+        }
       }
     },
     "c5": {
@@ -209,7 +319,38 @@ globalThis.YUCHAI_MEDIA = {
         ],
         "voiceProvider": "Volcengine Doubao TTS",
         "voiceName": "zh_male_yunzhou_jupiter_bigtts",
-        "voiceLabel": "豆包合成配音 · 云舟"
+        "voiceLabel": "豆包合成配音 · 云舟",
+        "learningFocus": {
+          "sourceTitle": "海外准入与合作推进",
+          "reused": false,
+          "connection": "前3段用于海外经销商情境，第4段的责任和时间安排也可用于 OEM 项目推进。",
+          "goal": "把合作条件拆清，并推进一次有负责人和日期的评审。",
+          "segments": [
+            {
+              "start": 0,
+              "end": 21.083,
+              "title": "先核合作能力",
+              "action": "询问地区、客户、销量依据、资质、服务与备件能力。",
+              "sectionIndex": 2
+            },
+            {
+              "start": 21.083,
+              "end": 45.833,
+              "title": "拆开独家条件",
+              "action": "明确范围、期限、责任、目标、复核和退出，再确认审批权限。",
+              "sectionIndex": 0
+            },
+            {
+              "start": 67.292,
+              "end": 89.54,
+              "title": "明确下一步",
+              "action": "复述已确认事项，列资料、双方负责人和提交日期。",
+              "sectionIndex": 1
+            }
+          ],
+          "transferAction": "海外任务先做准入准备；OEM 任务重点看 01:07 后的合作推进，把动作、责任和日期带进收尾。",
+          "boundary": "示例不代表玉柴已批准的海外商务政策；实际审批、履约和资料提交需要业务证据。"
+        }
       }
     }
   }

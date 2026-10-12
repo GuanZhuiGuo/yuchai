@@ -411,6 +411,15 @@
 .report-page .turn-feedback .icon { width: 14px; height: 14px; }
 .report-page .evaluation-level { padding: 2px 6px; border-radius: 4px; background: #e8ebe2; color: #4a5742; font-size: 10px; font-weight: 550; line-height: 1.6; }
 .report-page .turn-feedback p { margin-top: 7px; color: #4b5546; font-size: 12px; line-height: 1.95; }
+.report-page .report-feedback-conflict { margin-top: 15px; padding: 14px; border: 1px solid #dbc3a0; border-radius: 8px; background: #fbf6ed; color: #5d4a32; }
+.report-page .report-feedback-conflict > strong { display: flex; align-items: center; gap: 6px; font-size: 12px; line-height: 1.8; }
+.report-page .report-feedback-conflict .icon { width: 15px; height: 15px; flex: none; }
+.report-page .report-feedback-conflict p, .report-page .report-feedback-conflict dd { margin-top: 7px; font-size: 12px; line-height: 1.9; overflow-wrap: anywhere; }
+.report-page .report-feedback-conflict dl { margin-top: 12px; }
+.report-page .report-feedback-conflict dl > div + div { margin-top: 12px; }
+.report-page .report-feedback-conflict dt { font-size: 11px; font-weight: 650; line-height: 1.8; }
+.report-page .report-feedback-conflict dd { margin-left: 0; }
+.report-page .report-feedback-conflict .report-conflict-action { padding-top: 9px; border-top: 1px solid #e6d8c3; }
 .report-page .turn-topics { margin-top: 16px; }
 .report-page .turn-topics > span { display: block; margin-bottom: 3px; color: var(--muted); font-size: 10px; line-height: 1.8; }
 .report-page .turn-topics button { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 44px; padding: 10px 0; border-bottom: 1px solid var(--line); color: var(--red); font-size: 12px; line-height: 1.8; text-align: left; }
