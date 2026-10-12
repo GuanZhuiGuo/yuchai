@@ -140,6 +140,8 @@
 
 十二个前端文件的发布包为 `deploy/releases/20261012T034500Z-frontend/frontend.tar.gz`，使用 `deploy/apply-frontend.py` 校验本机载荷及目标原文件哈希，预检 JavaScript 语法、备份文件后逐项原子替换，入口模块最后替换；失败回滚本次已替换文件。服务器凭据、进程、运行时和上游配置不属于该发布包。旧服务器备份目录为 `/opt/yuchai-learning-h5/frontend-updates/20261012T034500Z/backup`；新服务器的对应目录位于 `/mnt/vdb/yuchai-learning-h5/frontend-updates/20261012T034500Z/backup`。
 
+旧、新两台服务器均完成十二个公开文件的 SHA256 核验，health 为 live，计划列表包含八项任务。旧服务器应用 PID `3927177`、新服务器应用 PID `653626` 与网关 PID `653631` 保持不变。新服务器通过原有 Edge 的 ECS Terminal 从 GitHub 固定提交 `f9518a988fcc0856993d11792e7c385bcb515fa0` 下载并校验代码后发布，未重新登录或改动凭据。线上浏览器回读报告 300 的冲突提示、OEM 复练来源和同场景入口；旧单题进度显示已通过 1 / 3 并打开第 2 题，风险课呈现视频复用边界与重点时段。
+
 本地证据目录为 `outputs/学习平台反馈修复-20261012/evidence/`，包含测试日志、服务器基线、发布及公网哈希回执。三分辨率和滚动证据位于 `output/playwright/layout-verification.json`，截图位于同目录。
 
 ## 运维命令
