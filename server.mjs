@@ -286,8 +286,10 @@ export function createApplication({
     return envelope.data;
   }
 
+  function upstreamUserId() { return platform ? positiveInteger(platform.runtimeSnapshot?.().capabilities?.sparring?.options?.operate_user_id ?? USER_ID, '上游学员编号') : USER_ID; }
+
   async function planDetail(id) {
-    return publicPlanDetail(await callUpstream('POST', 'getSparringPlanDetail', { operate_user_id: USER_ID, plan_id: id }), id);
+    return publicPlanDetail(await callUpstream('POST', 'getSparringPlanDetail', { operate_user_id: upstreamUserId(), plan_id: id }), id);
   }
 
   async function localExercise(id) {
@@ -300,7 +302,7 @@ export function createApplication({
       const value = await response.json();
       if (!response.ok || !value.data) throw new ApiError(response.status || 403, 'EXERCISE_NOT_OWNED', '该练习不属于当前平台账户');
       if (record && record.ownerUserId !== ownerUserId) throw new ApiError(403, 'EXERCISE_NOT_OWNED', '该练习不属于当前平台账户');
-      record = { ...value.data, ...(record || {}), ownerUserId };
+      record = { ...(record || {}), ...value.data, ending: record?.ending || false, ownerUserId };
       exercises.set(id, record);
     }
     if (!record) throw new ApiError(403, 'EXERCISE_NOT_LOCAL', '仅可操作本次服务启动后由本页创建的练习');
@@ -309,8 +311,8 @@ export function createApplication({
 
   async function ownedExercise(id) {
     if (platform) await localExercise(id);
-    const detail = await callUpstream('GET', `exercise/${id}/detail?operate_user_id=${USER_ID}`);
-    if (Number(detail.user_id) !== USER_ID) throw new ApiError(403, 'EXERCISE_NOT_OWNED', '该练习不属于当前学员');
+    const detail = await callUpstream('GET', `exercise/${id}/detail?operate_user_id=${upstreamUserId()}`);
+    if (Number(detail.user_id) !== upstreamUserId()) throw new ApiError(403, 'EXERCISE_NOT_OWNED', '该练习不属于当前学员');
     const planId = allowedPlan(detail.plan_id);
     const record = exercises.get(id);
     if (record && record.planId !== planId) throw new ApiError(403, 'EXERCISE_PLAN_MISMATCH', '练习所属课程不匹配');
@@ -323,7 +325,7 @@ export function createApplication({
     const planValue = url.searchParams.get('planId');
     const planId = planValue == null ? null : allowedPlan(planValue);
     const data = await callUpstream('POST', 'getExerciseHistory', {
-      operate_user_id: USER_ID, page, page_size: pageSize,
+      operate_user_id: upstreamUserId(), page, page_size: pageSize,
       ...(planId == null ? {} : { plan_id: planId }),
     });
     const candidates = (Array.isArray(data.list) ? data.list : []).filter((row) =>
@@ -359,10 +361,10 @@ export function createApplication({
 
   async function api(req, res, url) {
     if (req.method === 'GET' && url.pathname === '/api/health') {
-      return sendJSON(res, 200, { mode: platform ? 'platform' : configured ? 'live' : 'unconfigured', projectId: PROJECT_ID, userId: USER_ID });
+      return sendJSON(res, 200, { mode: platform ? 'platform' : configured ? 'live' : 'unconfigured', projectId: PROJECT_ID, userId: upstreamUserId() });
     }
     if (req.method === 'GET' && url.pathname === '/api/plans') {
-      const data = await callUpstream('POST', 'getStudentPracticeInfo', { operate_user_id: USER_ID });
+      const data = await callUpstream('POST', 'getStudentPracticeInfo', { operate_user_id: upstreamUserId() });
       const plans = new Map();
       for (const [field, type] of [['pending_practice_list', 'practice'], ['pending_exam_list', 'exam'], ['finished_exam_list', 'exam']]) {
         for (const row of Array.isArray(data[field]) ? data[field] : []) {
@@ -384,7 +386,7 @@ export function createApplication({
         throw new ApiError(409, 'DIALOGUE_PROTOCOL_UNAVAILABLE', '本课程的对话协议尚未接入');
       }
       const data = await callUpstream('POST', 'startSparringExercise', {
-        operate_user_id: USER_ID, plan_id: planId, role_id: roleId,
+        operate_user_id: upstreamUserId(), plan_id: planId, role_id: roleId,
       }, 'start');
       const id = positiveInteger(data.exercise_id, '练习 ID');
       const record = { id, planId, roleId, ...(platform ? { ownerUserId: platform.currentActor()?.user_id } : {}), name: String(data.name ?? ''), dialogueMode: plan.dialogueMode, ending: false, ended: false };
@@ -402,7 +404,7 @@ export function createApplication({
       }
       if (req.method === 'GET' && action === 'report') {
         await ownedExercise(id);
-        return sendJSON(res, 200, publicReportDetail(await callUpstream('GET', `exercise/${id}/getReport?operate_user_id=${USER_ID}`, null, 'report')));
+        return sendJSON(res, 200, publicReportDetail(await callUpstream('GET', `exercise/${id}/getReport?operate_user_id=${upstreamUserId()}`, null, 'report')));
       }
       if (req.method === 'POST' && action === 'end') {
         await requestBody(req);
@@ -412,7 +414,7 @@ export function createApplication({
         record.ending = true;
         try {
           await ownedExercise(id);
-          const data = await callUpstream('POST', 'endSparringExercise', { operate_user_id: USER_ID, exercise_id: id });
+          const data = await callUpstream('POST', 'endSparringExercise', { operate_user_id: upstreamUserId(), exercise_id: id });
           record.ended = true;
           record.endStatus = String(data.status ?? 'finished');
           activeVoice.get(id)?.client.close(1000, '练习已结束');
@@ -509,7 +511,7 @@ export function createApplication({
       reserved = true;
       const detail = await ownedExercise(id);
       if (detail.status !== 'running') throw new ApiError(409, 'EXERCISE_NOT_RUNNING', '练习尚未就绪，请等待后重试');
-      const ticketData = await callUpstream('POST', 'getWsTicket', { operate_user_id: USER_ID, exercise_id: id });
+      const ticketData = await callUpstream('POST', 'getWsTicket', { operate_user_id: upstreamUserId(), exercise_id: id });
       if (typeof ticketData.ticket !== 'string' || !ticketData.ticket) throw new ApiError(502, 'TICKET_MISSING', '上游未返回可用语音票据', true);
       if (socket.destroyed) return;
       const transportMode = requestedTransport ?? record.dialogueMode;
