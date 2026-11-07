@@ -57,7 +57,7 @@ function harness(hash = '#home', { observeCards = false, intersectionObserver = 
     fetch(url, options) {
       const path = url.pathname.replace('/yuchai-training', '');
       return new Promise((resolve, reject) => {
-        const record = { path, settled: false, signal: options.signal,
+        const record = { path, method: options.method || 'GET', body: options.body, settled: false, signal: options.signal,
           resolve(value) { record.settled = true; resolve(value); },
           reject(error) { record.settled = true; reject(error); } };
         options.signal?.addEventListener('abort', () => record.reject(options.signal.reason), { once: true });
@@ -86,6 +86,47 @@ function resolveStartup(app) {
   app.requests.find(r => r.path === '/api/health').resolve(response({ mode: 'live' }));
   app.requests.find(r => r.path === '/api/plans').resolve(response({ plans: [{ id: 71, status: 'active' }] }));
 }
+
+test('platform and standalone live modes enable the actual exercise creation flow', async () => {
+  for (const mode of ['platform', 'live']) {
+    const app = harness('#prepare/p-demand');
+    app.run('loadVoiceClient=async()=>({});connect=async()=>{}');
+    app.requests.find(r=>r.path==='/api/health').resolve(response({mode}));
+    app.requests.find(r=>r.path==='/api/plans').resolve(response({plans:[{id:71,status:'active'}]}));
+    await flush();
+    assert.equal(app.run('available(practice("p-demand"))'),true);
+    assert.match(app.node('#connection-status').textContent,/实战已就绪/);
+    assert.doesNotMatch(app.node('#practice-launch').innerHTML,/disabled/);
+    const attempt=app.run('startPractice("p-demand")');
+    await flush();
+    const created=app.requests.find(r=>r.path==='/api/exercises');
+    assert.equal(created.method,'POST');
+    assert.equal(JSON.parse(created.body).planId,71);
+    created.resolve(response({exerciseId:987,status:'running',dialogueMode:'text'}));
+    await attempt;
+    assert.equal(app.run('session.kind'),'live');
+    assert.equal(app.run('location.hash'),'session/p-demand/987');
+    app.run('const notices=[];modal=(title,text)=>notices.push(text)');
+    clickAction(app,'settings');
+    if(mode==='platform')assert.match(app.run('notices[0]'),/公司飞书账号用于登录，真实练习和报告按当前平台账号隔离/);
+    else assert.doesNotMatch(app.run('notices[0]'),/公司飞书账号/);
+  }
+});
+
+test('demo, unconfigured and failed platform plan discovery never create a real exercise', async () => {
+  for(const mode of ['demo','unconfigured','unknown','platform']) {
+    const app=harness('#prepare/p-demand');
+    app.requests.find(r=>r.path==='/api/health').resolve(response({mode}));
+    const plans=app.requests.find(r=>r.path==='/api/plans');
+    if(mode==='platform')plans.reject(Error('fixture plans unavailable'));
+    else plans.resolve(response({plans:[{id:71,status:'active'}]}));
+    await flush();
+    assert.equal(app.run('available(practice("p-demand"))'),false);
+    assert.match(app.node('#practice-launch').innerHTML,/disabled/);
+    await app.run('startPractice("p-demand")');
+    assert.equal(app.requests.some(r=>r.path==='/api/exercises'),false);
+  }
+});
 const details = app => app.requests.filter(request => /^\/api\/plans\//.test(request.path));
 const pendingDetail = (app, id) => details(app).find(request => !request.settled && request.path === `/api/plans/${id}`);
 function clickAction(app, action, data = {}) {

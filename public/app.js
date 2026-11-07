@@ -33,7 +33,7 @@ function cachedLearningState(){let raw;try{raw=JSON.parse(localStorage.getItem(K
 let state=cachedLearningState(),cacheSaveFailed=false;
 let route=[],filter='all',query='',plans=[],liveAvailable=false,session=null,startingLive=false,voice,timer,toastTimer,activeReport,reportPoll=0,selectedAnswer=-1,checkedAnswer=false,activeQuiz='',activeQuizIndex=0;
 let reportUI=initialReportUI();
-let connectionState='checking',connectionRequest,voiceModulePromise;
+let connectionState='checking',backendMode='unknown',connectionRequest,voiceModulePromise;
 const planDetailRequests=new Map();
 const planDetailUpdatedAt=new Map(),planDetailErrors=new Set();
 const planDetailQueue=[],planDetailActive=new Set();
@@ -84,7 +84,8 @@ function refreshConnection(){
  connectionState='checking';refreshAvailabilityUI();
  connectionRequest=Promise.allSettled([api('/api/health',{timeoutMs:8000}),api('/api/plans',{timeoutMs:8000})]).then(([health,list])=>{
   plans=list.status==='fulfilled'&&Array.isArray(list.value.plans)?list.value.plans:[];
-  liveAvailable=health.status==='fulfilled'&&health.value.mode==='live';
+  backendMode=health.status==='fulfilled'?health.value.mode:'unknown';
+  liveAvailable=['live','platform'].includes(backendMode);
   connectionState=health.status==='fulfilled'&&list.status==='fulfilled'?'ready':'error';
   if(connectionState==='error')liveAvailable=false;
   refreshAvailabilityUI();
@@ -394,7 +395,7 @@ else if(a==='report-topic'){
  reportUI.tab='scoring';reportUI.dimension=index;reportUI.topic=itemId;
  refreshReportPanel(`#report-topic-${CSS.escape(itemId)}`,true);
 }
-else if(a==='settings')modal('学习平台说明',`五门原创示范课程包含视频微课、图文讲义和自检。课程关联 ${D.practices.length} 项实战，当前 ${D.practices.filter(published).length} 项已发布${D.practices.some(p=>!published(p))?'，其余待配置':''}。可直接实战，也可先学习；准备页标记各场景可用的表达方式。学习进度按视频有效观看、讲义阅读和自检记录保存在当前浏览器，同一地址刷新后可继续；企业正式练习、认证与课件管理待接入。`,[{label:'知道了',action:'close'}]);
+else if(a==='settings')modal('学习平台说明',`五门原创示范课程包含视频微课、图文讲义和自检。课程关联 ${D.practices.length} 项实战，当前 ${D.practices.filter(published).length} 项已发布${D.practices.some(p=>!published(p))?'，其余待配置':''}。可直接实战，也可先学习；准备页标记各场景可用的表达方式。学习进度按视频有效观看、讲义阅读和自检记录保存在当前浏览器，同一地址刷新后可继续。${backendMode==='platform'?'公司飞书账号用于登录，真实练习和报告按当前平台账号隔离。':'实战入口以当前后台连接状态为准。'}认证与课件管理仍待接入。`,[{label:'知道了',action:'close'}]);
 else if(a==='reset')modal('重置本地学习进度？','清除此浏览器的课程和视频学习进度，远端实战记录仍保留。',[{label:'保留进度',action:'close',secondary:true},{label:'重置进度',action:'confirm-reset'}]);
 else if(a==='confirm-reset'){sheet.close();state=emptyLearningState(Math.max(Date.now(),state.resetAt+1));save();go('home');toast('本地学习进度已重置。');}
 else if(a==='story-start')go('courses');
