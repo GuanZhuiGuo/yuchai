@@ -1,4 +1,6 @@
 import { createServer } from 'node:http';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
 import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { createReadStream, realpathSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
@@ -233,11 +235,13 @@ export function createApplication({
   publicRoot = PUBLIC_ROOT,
   publicOrigin = process.env.PUBLIC_ORIGIN ?? '',
   connectWebSocket = (url, options) => new WebSocket(url, options),
+  platformAdapter = null,
 } = {}) {
+  const platform = platformAdapter || (process.env.PLATFORM_ENABLED === 'true' ? require(process.env.PLATFORM_SDK_PATH || '/opt/demo-platform/current/deploy/service-sdk/node-platform.cjs') : null);
   const acceptedPublicOrigin = deploymentOrigin(publicOrigin);
   const publicSocketOrigin = acceptedPublicOrigin
     ? acceptedPublicOrigin.replace(/^http/, 'ws') : '';
-  const configured = Boolean(accessKey && secretKey);
+  const configured = Boolean(platform || (accessKey && secretKey));
   const exercises = new Map();
   const activeVoice = new Map();
   const voiceReservations = new Set();
@@ -250,12 +254,14 @@ export function createApplication({
     const headers = signRequest({ method, pathname: url.pathname, body, accessKey, secretKey });
     let response;
     try {
-      response = await upstreamFetch(url, {
+      response = await (platform ? platform.externalFetch(suffix, {
+        method, ...(method === 'POST' ? { body } : {}), signal: AbortSignal.timeout(20_000),
+      }) : upstreamFetch(url, {
         method, headers,
         ...(method === 'POST' ? { body } : {}),
         signal: AbortSignal.timeout(20_000),
         redirect: 'error',
-      });
+      }));
     } catch {
       // Do not surface URL, signature, ticket, or credential-bearing errors.
       throw new ApiError(502, 'UPSTREAM_UNREACHABLE', '无法连接真实陪练服务，请检查网络后重试', true);
@@ -263,6 +269,9 @@ export function createApplication({
     let envelope;
     try { envelope = await response.json(); } catch {
       throw new ApiError(502, 'UPSTREAM_INVALID_RESPONSE', '上游未返回有效 JSON 数据', true);
+    }
+    if (platform && !response.ok) {
+      throw new ApiError(response.status, envelope?.error?.code || 'PLATFORM_REJECTED', envelope?.error?.message || '平台拒绝了该陪练请求', response.status >= 500);
     }
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
@@ -281,13 +290,25 @@ export function createApplication({
     return publicPlanDetail(await callUpstream('POST', 'getSparringPlanDetail', { operate_user_id: USER_ID, plan_id: id }), id);
   }
 
-  function localExercise(id) {
-    const record = exercises.get(id);
+  async function localExercise(id) {
+    let record = exercises.get(id);
+    if (platform) {
+      const ownerUserId = platform.currentActor()?.user_id;
+      if (!ownerUserId) throw new ApiError(401, 'PLATFORM_LOGIN_REQUIRED', '请先登录应用工作台');
+      // Revalidate durable ownership even when this process has a cached record.
+      const response = await platform.externalFetch(`resources/${id}`, { method: 'GET' });
+      const value = await response.json();
+      if (!response.ok || !value.data) throw new ApiError(response.status || 403, 'EXERCISE_NOT_OWNED', '该练习不属于当前平台账户');
+      if (record && record.ownerUserId !== ownerUserId) throw new ApiError(403, 'EXERCISE_NOT_OWNED', '该练习不属于当前平台账户');
+      record = { ...value.data, ...(record || {}), ownerUserId };
+      exercises.set(id, record);
+    }
     if (!record) throw new ApiError(403, 'EXERCISE_NOT_LOCAL', '仅可操作本次服务启动后由本页创建的练习');
     return record;
   }
 
   async function ownedExercise(id) {
+    if (platform) await localExercise(id);
     const detail = await callUpstream('GET', `exercise/${id}/detail?operate_user_id=${USER_ID}`);
     if (Number(detail.user_id) !== USER_ID) throw new ApiError(403, 'EXERCISE_NOT_OWNED', '该练习不属于当前学员');
     const planId = allowedPlan(detail.plan_id);
@@ -338,7 +359,7 @@ export function createApplication({
 
   async function api(req, res, url) {
     if (req.method === 'GET' && url.pathname === '/api/health') {
-      return sendJSON(res, 200, { mode: configured ? 'live' : 'unconfigured', projectId: PROJECT_ID, userId: USER_ID });
+      return sendJSON(res, 200, { mode: platform ? 'platform' : configured ? 'live' : 'unconfigured', projectId: PROJECT_ID, userId: USER_ID });
     }
     if (req.method === 'GET' && url.pathname === '/api/plans') {
       const data = await callUpstream('POST', 'getStudentPracticeInfo', { operate_user_id: USER_ID });
@@ -366,7 +387,7 @@ export function createApplication({
         operate_user_id: USER_ID, plan_id: planId, role_id: roleId,
       }, 'start');
       const id = positiveInteger(data.exercise_id, '练习 ID');
-      const record = { id, planId, roleId, name: String(data.name ?? ''), dialogueMode: plan.dialogueMode, ending: false, ended: false };
+      const record = { id, planId, roleId, ...(platform ? { ownerUserId: platform.currentActor()?.user_id } : {}), name: String(data.name ?? ''), dialogueMode: plan.dialogueMode, ending: false, ended: false };
       exercises.set(id, record);
       return sendJSON(res, 201, exerciseSummary(data, record));
     }
@@ -385,7 +406,7 @@ export function createApplication({
       }
       if (req.method === 'POST' && action === 'end') {
         await requestBody(req);
-        const record = localExercise(id);
+        const record = await localExercise(id);
         if (record.ending) throw new ApiError(409, 'END_IN_PROGRESS', '正在结束练习，请稍候');
         if (record.ended) return sendJSON(res, 200, { id, exerciseId: id, status: record.endStatus });
         record.ending = true;
@@ -405,7 +426,7 @@ export function createApplication({
   }
 
   const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.wasm': 'application/wasm', '.ico': 'image/x-icon', '.mp4': 'video/mp4', '.vtt': 'text/vtt; charset=utf-8' };
-  const server = createServer(async (req, res) => {
+  async function handleHttp(req, res) {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'no-referrer');
     res.setHeader('Permissions-Policy', 'microphone=(self), camera=()');
@@ -448,6 +469,13 @@ export function createApplication({
       if (!res.headersSent) sendError(res, error);
       else res.end();
     }
+  }
+  const server = createServer(async (req, res) => {
+    if (platform && new URL(req.url, 'http://localhost').pathname !== '/api/health') {
+      if (!await platform.protect(req, res)) return;
+      return platform.withRequest(req, () => handleHttp(req, res));
+    }
+    return handleHttp(req, res);
   });
 
   function rejectUpgrade(socket, status, message) {
@@ -456,7 +484,7 @@ export function createApplication({
     socket.end(`HTTP/1.1 ${status} Rejected\r\nContent-Type: application/json\r\nConnection: close\r\nContent-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}`);
   }
 
-  server.on('upgrade', async (req, socket, head) => {
+  async function handleUpgrade(req, socket, head) {
     let id;
     let upstream;
     let handedOff = false;
@@ -473,7 +501,7 @@ export function createApplication({
         throw new ApiError(404, 'VOICE_ROUTE_NOT_FOUND', '对话连接地址无效');
       }
       id = positiveInteger(route[1], '练习 ID');
-      const record = localExercise(id);
+      const record = await localExercise(id);
       if (record.ended || record.ending) throw new ApiError(409, 'EXERCISE_ENDED', '练习已结束或正在结束');
       if (!['text', 'virtual_streaming_dialogue'].includes(record.dialogueMode)) throw new ApiError(409, 'DIALOGUE_PROTOCOL_UNAVAILABLE', '本课程的对话协议尚未接入');
       if (activeVoice.has(id) || voiceReservations.has(id)) throw new ApiError(409, 'VOICE_ALREADY_CONNECTED', '该练习已有语音连接');
@@ -566,6 +594,15 @@ export function createApplication({
         upstream.close();
       }
     }
+  }
+  server.on('upgrade', async (req, socket, head) => {
+    if (platform) {
+      try {
+        if (!await platform.protectUpgrade(req)) return rejectUpgrade(socket, 401, '请先登录应用工作台');
+        return await platform.withRequest(req, () => handleUpgrade(req, socket, head));
+      } catch { return rejectUpgrade(socket, 503, '平台身份验证暂不可用'); }
+    }
+    return handleUpgrade(req, socket, head);
   });
 
   return {
