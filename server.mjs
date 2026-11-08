@@ -3,7 +3,8 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { createReadStream, realpathSync } from 'node:fs';
-import { stat } from 'node:fs/promises';
+import { stat, readFile } from 'node:fs/promises';
+import { createTrainingWorkspace } from './training-platform.mjs';
 import { dirname, extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocket, WebSocketServer } from 'ws';
@@ -238,6 +239,8 @@ export function createApplication({
   platformAdapter = null,
 } = {}) {
   const platform = platformAdapter || (process.env.PLATFORM_ENABLED === 'true' ? require(process.env.PLATFORM_SDK_PATH || '/opt/demo-platform/current/deploy/service-sdk/node-platform.cjs') : null);
+  const workspace = platform ? createTrainingWorkspace(platform, 'yuchai') : null;
+  const platformOrigin = platform ? deploymentOrigin(process.env.PLATFORM_PUBLIC_ORIGIN || '') : '';
   const acceptedPublicOrigin = deploymentOrigin(publicOrigin);
   const publicSocketOrigin = acceptedPublicOrigin
     ? acceptedPublicOrigin.replace(/^http/, 'ws') : '';
@@ -360,6 +363,7 @@ export function createApplication({
   }
 
   async function api(req, res, url) {
+    if (platform && req.method === 'GET' && url.pathname === '/api/platform/resources') return sendJSON(res, 200, await workspace.resources());
     if (req.method === 'GET' && url.pathname === '/api/health') {
       return sendJSON(res, 200, { mode: platform ? 'platform' : configured ? 'live' : 'unconfigured', projectId: PROJECT_ID, userId: upstreamUserId() });
     }
@@ -432,7 +436,8 @@ export function createApplication({
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'no-referrer');
     res.setHeader('Permissions-Policy', 'microphone=(self), camera=()');
-    res.setHeader('Content-Security-Policy', `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self' ws://127.0.0.1:* ws://localhost:* ${publicSocketOrigin}; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`);
+    const nonce = randomUUID();
+    res.setHeader('Content-Security-Policy', `default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'nonce-${nonce}' ${platformOrigin}; style-src 'self' 'unsafe-inline' ${platformOrigin}; img-src 'self' data:; media-src 'self' blob:; connect-src 'self' ${platformOrigin} ws://127.0.0.1:* ws://localhost:* ${publicSocketOrigin}; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`);
     try {
       if (!localRequest(req)) throw new ApiError(403, 'LOCAL_HOST_REQUIRED', '本服务仅接受本机地址访问');
       if (req.method === 'POST' && !sameOrigin(req, acceptedPublicOrigin)) throw new ApiError(403, 'ORIGIN_REJECTED', '请求来源不被允许');
@@ -447,6 +452,11 @@ export function createApplication({
         if (!fileStat.isFile()) throw new Error();
       } catch {
         throw new ApiError(404, 'FILE_NOT_FOUND', '页面资源不存在');
+      }
+      if (platform && extname(path) === '.html') {
+        const body = await workspace.html(await readFile(path, 'utf8'), nonce);
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store, private', 'Content-Length': Buffer.byteLength(body) });
+        return res.end(req.method === 'HEAD' ? undefined : body);
       }
       const headers = {
         'Content-Type': mime[extname(path)] ?? 'application/octet-stream',
@@ -474,8 +484,18 @@ export function createApplication({
   }
   const server = createServer(async (req, res) => {
     if (platform && new URL(req.url, 'http://localhost').pathname !== '/api/health') {
-      if (!await platform.protect(req, res)) return;
-      return platform.withRequest(req, () => handleHttp(req, res));
+      try {
+        if (!await platform.protect(req, res)) return;
+        workspace.assertExpectedUser(req);
+        return await platform.withRequest(req, async () => {
+          if (await platform.handleWorkspaceRequest?.(req, res)) return;
+          return handleHttp(req, res);
+        });
+      } catch (error) {
+        if (!res.headersSent) sendJSON(res, error.status || 503, { error: { code: error.code || 'platform_unavailable', message: error.status === 409 ? error.message : '个人工作空间暂不可用，请稍后重试。' } });
+        else res.end();
+        return;
+      }
     }
     return handleHttp(req, res);
   });
@@ -497,7 +517,7 @@ export function createApplication({
       const url = new URL(req.url, `http://${req.headers.host}`);
       const route = /^\/api\/voice\/(\d+)$/.exec(url.pathname);
       const requestedTransport = url.searchParams.get('transport');
-      if (!route || [...url.searchParams.keys()].some((key) => key !== 'transport') ||
+      if (!route || [...url.searchParams.keys()].some((key) => key !== 'transport' && !(platform && key === 'platform_expected_user')) ||
         url.searchParams.getAll('transport').length > 1 ||
         (requestedTransport !== null && requestedTransport !== 'text')) {
         throw new ApiError(404, 'VOICE_ROUTE_NOT_FOUND', '对话连接地址无效');
@@ -601,8 +621,9 @@ export function createApplication({
     if (platform) {
       try {
         if (!await platform.protectUpgrade(req)) return rejectUpgrade(socket, 401, '请先登录应用工作台');
+        workspace.assertExpectedUser(req);
         return await platform.withRequest(req, () => handleUpgrade(req, socket, head));
-      } catch { return rejectUpgrade(socket, 503, '平台身份验证暂不可用'); }
+      } catch (error) { return rejectUpgrade(socket, error.status || 503, error.status === 409 ? error.message : '平台身份验证暂不可用'); }
     }
     return handleUpgrade(req, socket, head);
   });

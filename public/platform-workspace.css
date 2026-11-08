@@ -1,0 +1,4 @@
+body.has-platform-workspace .demo-layout { height: calc(100dvh - var(--platform-shell-height, 56px)); --frame-height: min(calc(100dvh - var(--platform-shell-height, 56px) - 40px), 920px); }
+body.has-platform-workspace .presentation { max-height: calc(100dvh - var(--platform-shell-height, 56px) - 40px); }
+#training-state-status { position: fixed; bottom: 12px; right: 12px; z-index: 2147483000; padding: 8px 12px; border: 1px solid #c58a32; border-radius: 8px; background: #fff8e8; color: #543700; font: 13px sans-serif; max-width: 90vw; }
+@media (max-width: 899px) { body.has-platform-workspace .app-frame { height: calc(100dvh - var(--platform-shell-height, 56px)); } }
