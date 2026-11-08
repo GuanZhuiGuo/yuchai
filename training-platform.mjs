@@ -1,6 +1,7 @@
 const object = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const json = value => JSON.stringify(value).replace(/</g, '\\u003c');
-const timestamp = value => { const date = new Date(value); return value && Number.isFinite(date.getTime()) ? date.toISOString() : null; };
+const timestamp = value => { const date = new Date(value); return value && Number.isFinite(date.getTime()) && date.getUTCFullYear() >= 1 && date.getUTCFullYear() <= 9999 ? date.toISOString() : null; };
+const resourceTitle = (value, fallback) => Array.from(String(value ?? '').replace(/[\x00-\x1f\x7f]+/g, ' ').trim() || fallback).slice(0, 500).join('');
 
 export function createTrainingWorkspace(platform, serviceId) {
   const namespace = `${serviceId}-workspace`;
@@ -24,32 +25,37 @@ export function createTrainingWorkspace(platform, serviceId) {
     const state = await platform.readUserState(namespace);
     const values = object(state.value);
     const resources = [];
-    if (state.revision > 0 && state.updated_at) resources.push({ id: 'learning-state', type: 'workspace_state', title: '个人学习工作空间',
-      updated_at: timestamp(state.updated_at), status: 'saved', path: '/#me' });
+    const stateUpdated = timestamp(state.updated_at);
+    if (state.revision > 0 && stateUpdated) resources.push({ id: 'learning-state', type: 'workspace_state', title: '个人学习工作空间',
+      updated_at: stateUpdated, status: 'saved', path: '/#me' });
     if (serviceId === 'huali') {
       const parse = key => { try { const value = JSON.parse(values[key] || '[]'); return Array.isArray(value) ? value : []; } catch { return []; } };
-      for (const record of parse('huali-training-content-v1').slice(0, 30)) {
-        if (!/^[a-zA-Z0-9_.:-]{1,100}$/.test(record.id || '') || !timestamp(record.createdAt)) continue;
-        resources.push({ id: record.id, type: 'course_draft', title: String(record.title || '个人课程草稿').slice(0, 500),
+      for (const item of parse('huali-training-content-v1')) {
+        const record = object(item);
+        if (typeof record.id !== 'string' || !/^[a-zA-Z0-9_.:-]{1,100}$/.test(record.id) || !timestamp(record.createdAt)) continue;
+        resources.push({ id: record.id, type: 'course_draft', title: resourceTitle(record.title, '个人课程草稿'),
           updated_at: timestamp(record.createdAt), status: ['draft', 'published', 'superseded'].includes(record.status) ? record.status : 'draft', path: `/#builder/${encodeURIComponent(record.id)}` });
       }
-      for (const record of parse('huali-training-activity-v1').slice(0, 30)) {
-        if (!/^[a-zA-Z0-9_.:-]{1,100}$/.test(record.id || '') || !timestamp(record.createdAt)) continue;
-        resources.push({ id: record.id, type: record.type === 'exam' ? 'knowledge_exam' : 'practice', title: String(record.title || '个人练习记录').slice(0, 500),
+      for (const item of parse('huali-training-activity-v1')) {
+        const record = object(item);
+        if (typeof record.id !== 'string' || !/^[a-zA-Z0-9_.:-]{1,100}$/.test(record.id) || !timestamp(record.createdAt)) continue;
+        resources.push({ id: record.id, type: record.type === 'exam' ? 'knowledge_exam' : 'practice', title: resourceTitle(record.title, '个人练习记录'),
           updated_at: timestamp(record.createdAt), status: 'completed', path: `/#${record.type === 'exam' ? 'exam-result' : 'local-report'}/${encodeURIComponent(record.id)}` });
       }
     }
     const response = await platform.externalFetch('resources?page=1&page_size=20', { method: 'GET' });
     const payload = await response.json();
     if (!response.ok || !Array.isArray(payload?.data?.list)) throw Error('Personal exercise catalog unavailable');
-    for (const record of payload.data.list) {
+    for (const item of payload.data.list) {
+      const record = object(item);
       if (!/^[1-9][0-9]{0,17}$/.test(String(record.external_id || ''))) continue;
       const meta = object(record.metadata), updated = timestamp(record.updated_at || record.created_at);
       if (!updated) continue;
-      resources.push({ id: `exercise-${record.external_id}`, type: 'exercise', title: String(meta.name || meta.planName || '个人实战练习').slice(0, 500),
+      resources.push({ id: `exercise-${record.external_id}`, type: 'exercise', title: resourceTitle(meta.name || meta.planName, '个人实战练习'),
         updated_at: updated, status: meta.ended ? 'finished' : 'recorded', path: `/#report/live/${record.external_id}` });
     }
-    return { resources, scope: 'current_user' };
+    resources.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+    return { resources: resources.slice(0, 100), scope: 'current_user' };
   }
   return { html, resources, assertExpectedUser };
 }
